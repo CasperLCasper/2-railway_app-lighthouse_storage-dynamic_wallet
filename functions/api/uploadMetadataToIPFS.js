@@ -50,16 +50,18 @@ export async function onRequestPost(context) {
       });
     }
 
-    console.log(`🚀 Sākam metadatu augšupielādi uz īsto Lighthouse mezglu...`);
+    console.log(`🚀 Sākam metadatu augšupielādi uz universālo Lighthouse API...`);
 
+    // Konvertējam JSON uz Buffer un tad uz drošu drošu Blob sistēmas stabilitātei
     const jsonString = JSON.stringify(metadata);
-    const metadataBlob = new Blob([jsonString], { type: 'application/json' });
+    const nodeBuffer = Buffer.from(jsonString, 'utf-8');
+    const metadataBlob = new Response(nodeBuffer).blob();
     
     const customFormData = new FormData();
-    customFormData.append('file', metadataBlob, 'metadata.json');
+    customFormData.append('file', await metadataBlob, 'metadata.json');
 
-    // 4. Sūtām uz stabilo add galapunktu
-    const response = await fetch('https://node.lighthouse.storage/api/v0/add', {
+    // 4. Sūtām uz stabilo API galapunktu (api. node. vietā)
+    const response = await fetch('https://api.lighthouse.storage/api/v0/add', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${env.LIGHTHOUSE_API_KEY}`
