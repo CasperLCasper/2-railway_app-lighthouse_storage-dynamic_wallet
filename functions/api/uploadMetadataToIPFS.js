@@ -43,25 +43,23 @@ export async function onRequestPost(context) {
     }
 
     if (!env.LIGHTHOUSE_API_KEY) {
-      console.error("❌ Railway sistēmā nav atrasts LIGHTHOUSE_API_KEY!");
       return new Response(JSON.stringify({ error: 'Server configuration error: Missing API Key' }), {
         status: 500,
         headers: { "Content-Type": "application/json" }
       });
     }
 
-    console.log(`🚀 Sākam metadatu augšupielādi uz universālo Lighthouse API...`);
+    console.log(`🚀 Sākam metadatu augšupielādi uz Lighthouse API (/api/v0/upload)...`);
 
-    // Konvertējam JSON uz Buffer un tad uz drošu drošu Blob sistēmas stabilitātei
     const jsonString = JSON.stringify(metadata);
-    const nodeBuffer = Buffer.from(jsonString, 'utf-8');
-    const metadataBlob = new Response(nodeBuffer).blob();
+    const buffer = Buffer.from(jsonString, 'utf-8');
+    const metadataBlob = new Blob([buffer], { type: 'application/json' });
     
     const customFormData = new FormData();
-    customFormData.append('file', await metadataBlob, 'metadata.json');
+    customFormData.append('file', metadataBlob, 'metadata.json');
 
-    // 4. Sūtām uz stabilo API galapunktu (api. node. vietā)
-    const response = await fetch('https://api.lighthouse.storage/api/v0/add', {
+    // 4. Sūtām uz ražošanas upload galapunktu
+    const response = await fetch('https://api.lighthouse.storage/api/v0/upload', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${env.LIGHTHOUSE_API_KEY}`
@@ -72,11 +70,11 @@ export async function onRequestPost(context) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`❌ Lighthouse API noraidīja metadatus: ${response.status} - ${errorText}`);
-      throw new Error(`Lighthouse HTTP Error: ${response.status} - ${errorText}`);
+      throw new Error(`Lighthouse HTTP Error: ${response.status}`);
     }
 
     const result = await response.json();
-    const dataObj = Array.isArray(result) ? result[0] : result;
+    const dataObj = result.data ? result.data : result;
 
     if (!dataObj || !dataObj.Hash) {
       console.error('❌ Lighthouse neatgrieza Hash metadatiem. Atbilde:', result);
@@ -96,7 +94,7 @@ export async function onRequestPost(context) {
     });
 
   } catch (error) {
-    console.error('💥 Metadatu augšupielādes kļūda manuālajā fetch:', error);
+    console.error('💥 Metadatu augšupielādes kļūda:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { "Content-Type": "application/json" }
