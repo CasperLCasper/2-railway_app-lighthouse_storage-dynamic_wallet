@@ -8,7 +8,6 @@ export async function onRequestPost(context) {
   const { request, env } = context;
 
   try {
-    // 1. Lietotāja autentifikācija
     const user = await requireAuth(request, env);
     if (user instanceof Response) return user;
     if (!user || !user.address) {
@@ -18,7 +17,6 @@ export async function onRequestPost(context) {
       });
     }
 
-    // 2. Ātruma ierobežojums (Rate limiting)
     const rateKey = `upload-file:${user.address}`;
     if (!(await checkRateLimit({ key: rateKey, limit: 5, windowMs: 60000 }, env))) {
       return new Response(JSON.stringify({ error: 'Too many file uploads. Try again later.' }), {
@@ -27,7 +25,6 @@ export async function onRequestPost(context) {
       });
     }
 
-    // 3. Form data ielasīšana un validācija
     let formData;
     try {
       formData = await request.formData();
@@ -62,7 +59,6 @@ export async function onRequestPost(context) {
       });
     }
 
-    // 4. API atslēgas pārbaude drošībai
     if (!env.LIGHTHOUSE_API_KEY) {
       console.error("❌ Railway sistēmā nav atrasts LIGHTHOUSE_API_KEY mainīgais!");
       return new Response(JSON.stringify({ error: 'Server configuration error: Missing API Key' }), {
@@ -71,17 +67,16 @@ export async function onRequestPost(context) {
       });
     }
 
-    // 5. Sagatavojam FormData tīram API pieprasījumam
     const arrayBuffer = await fileEntry.arrayBuffer();
     const blob = new Blob([arrayBuffer], { type: contentType });
     
     const lighthouseFormData = new FormData();
     lighthouseFormData.append('file', blob, fileEntry.name);
 
-    console.log(`🚀 Sākam tīru fetch augšupielādi uz Lighthouse API. Fails: ${fileEntry.name}, Izmērs: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
+    console.log(`🚀 Sākam tīru fetch augšupielādi uz īsto Lighthouse API taku. Fails: ${fileEntry.name}`);
 
-    // 6. Veicam pieprasījumu uz aktīvo un stabilo Lighthouse API galapunktu
-    const response = await fetch('https://api.lighthouse.storage/api/v0/add', {
+    // LABOTS: /api/v0/add -> /api/v0/upload
+    const response = await fetch('https://api.lighthouse.storage/api/v0/upload', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${env.LIGHTHOUSE_API_KEY}`
@@ -89,7 +84,6 @@ export async function onRequestPost(context) {
       body: lighthouseFormData
     });
 
-    // 7. Pārbaudām tīkla atbildi
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`❌ Lighthouse API noraidīja pieprasījumu: ${response.status} - ${errorText}`);
@@ -98,7 +92,11 @@ export async function onRequestPost(context) {
 
     const result = await response.json();
     
-    if (!result || !result.Hash) {
+    // Lighthouse /upload atgriež { Name: '...', Hash: 'Qm...', Size: '...' } vai masīvu
+    // Ja atgriež masīvu (vairākiem failiem), paņemam pirmo elementu
+    const dataObj = Array.isArray(result) ? result[0] : result;
+
+    if (!dataObj || !dataObj.Hash) {
       console.error('❌ Lighthouse API neatgrieza korektu Hash. Saņemtā atbilde:', result);
       return new Response(JSON.stringify({ error: 'Upload failed - no CID returned from Lighthouse API' }), {
         status: 500,
@@ -106,7 +104,7 @@ export async function onRequestPost(context) {
       });
     }
 
-    const cid = result.Hash;
+    const cid = dataObj.Hash;
     console.log(`✅ Lietotājs ${user.address} veiksmīgi augšupielādēja failu: ${fileEntry.name}, CID: ${cid}`);
 
     return new Response(JSON.stringify({
