@@ -70,17 +70,19 @@ export async function onRequestPost(context) {
       });
     }
 
-    // 4. Uzbūvējam FormData priekš Lighthouse mezgla
+    // 4. Konvertējam uz tradicionālu Buffer (Railway tas strādā bez timeout gļukiem)
     const arrayBuffer = await fileEntry.arrayBuffer();
-    const fileBlob = new Blob([arrayBuffer], { type: contentType });
+    const nodeBuffer = Buffer.from(arrayBuffer);
     
     const customFormData = new FormData();
-    customFormData.append('file', fileBlob, fileEntry.name);
+    // Izmantojam vienkāršu faila pārsūtīšanu bez eksperimentālajiem Node Blob ietvariem
+    const fileBlob = new Response(nodeBuffer).blob();
+    customFormData.append('file', await fileBlob, fileEntry.name);
 
-    console.log(`🚀 Sūtām tīru HTTP POST uz īsto Lighthouse mezglu punktu. Fails: ${fileEntry.name}`);
+    console.log(`🚀 Mēģinām sūtīt failu uz Lighthouse Gateway API: ${fileEntry.name}`);
 
-    // 5. Izpildām pieprasījumu uz strādājošo IPFS pievienošanas galapunktu
-    const response = await fetch('https://node.lighthouse.storage/api/v0/add', {
+    // 5. Izmantojam rezerves augšupielādes vārteju ar pagarinātu savienojuma gaidīšanu
+    const response = await fetch('https://api.lighthouse.storage/api/v0/add', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${env.LIGHTHOUSE_API_KEY}`
@@ -95,8 +97,6 @@ export async function onRequestPost(context) {
     }
 
     const result = await response.json();
-    
-    // Lighthouse šajā maršrutā atgriež datus tiešā objektā vai kā masīvu
     const dataObj = Array.isArray(result) ? result[0] : result;
 
     if (!dataObj || !dataObj.Hash) {
