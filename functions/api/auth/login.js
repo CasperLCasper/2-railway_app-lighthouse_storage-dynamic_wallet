@@ -1,3 +1,4 @@
+import crypto from "crypto"; // <-- LABOTS: Importējam un inicializējam crypto Node.js videi
 import { verifySignature, createToken } from "../../_lib/auth.js";
 import { jwtVerify } from "jose";
 
@@ -32,7 +33,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: "Invalid nonce" });
     }
 
-    // Verificējam maka parakstu
+    // Verificējam maka parakstu (Šeit iekšā auth.js tika meklēts crypto objekts)
     const isValid = verifySignature(address, message, signature);
     if (!isValid) {
       return res.status(401).json({ error: "Invalid signature" });
