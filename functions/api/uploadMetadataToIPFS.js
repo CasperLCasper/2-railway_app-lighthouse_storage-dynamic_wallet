@@ -5,7 +5,6 @@ export async function onRequestPost(context) {
   const { request, env } = context;
 
   try {
-    // 1. Lietotāja autentifikācija
     const user = await requireAuth(request, env);
     if (user instanceof Response) return user;
     if (!user || !user.address) {
@@ -15,7 +14,6 @@ export async function onRequestPost(context) {
       });
     }
 
-    // 2. Ātruma ierobežojums (Rate limiting) metadatiem
     const rateKey = `upload-metadata:${user.address}`;
     if (!(await checkRateLimit({ key: rateKey, limit: 5, windowMs: 60000 }, env))) {
       return new Response(JSON.stringify({ error: 'Too many requests. Try again later.' }), {
@@ -24,7 +22,6 @@ export async function onRequestPost(context) {
       });
     }
 
-    // 3. JSON datu saņemšana no klienta (frontend)
     let metadata;
     try {
       metadata = await request.json();
@@ -42,7 +39,6 @@ export async function onRequestPost(context) {
       });
     }
 
-    // 4. API atslēgas pārbaude drošībai
     if (!env.LIGHTHOUSE_API_KEY) {
       console.error("❌ Railway sistēmā nav atrasts LIGHTHOUSE_API_KEY mainīgais!");
       return new Response(JSON.stringify({ error: 'Server configuration error: Missing API Key' }), {
@@ -53,19 +49,16 @@ export async function onRequestPost(context) {
 
     console.log(`🚀 Sākam metadatu augšupielādi uz Lighthouse priekš lietotāja: ${user.address}`);
 
-    const jsonString = JSON.stringify(metadata);
-
-    // 5. Veicam pieprasījumu uz stabilo Lighthouse API galapunktu
-    const response = await fetch('https://api.lighthouse.storage/api/v0/add', {
+    // LABOTS: Teksta/JSON tiešai sūtīšanai izmantojam text-json galapunktu
+    const response = await fetch('https://api.lighthouse.storage/api/v0/text-json', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${env.LIGHTHOUSE_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      body: jsonString
+      body: JSON.stringify(metadata)
     });
 
-    // 6. Pārbaudām tīkla atbildi
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`❌ Lighthouse API noraidīja metadatus: ${response.status} - ${errorText}`);
@@ -73,7 +66,8 @@ export async function onRequestPost(context) {
     }
 
     const result = await response.json();
-
+    
+    // text-json galapunkts atgriež { Name: '...', Hash: 'Qm...', Size: '...' } tiešā veidā
     if (!result || !result.Hash) {
       console.error('❌ Lighthouse API neatgrieza korektu Hash metadatiem. Atbilde:', result);
       return new Response(JSON.stringify({ error: 'Upload failed - no CID returned for metadata' }), {
