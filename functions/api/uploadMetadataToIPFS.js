@@ -50,17 +50,16 @@ export async function onRequestPost(context) {
       });
     }
 
-    console.log(`🚀 Sākam metadatu HTTP FormData augšupielādi uz Lighthouse...`);
+    console.log(`🚀 Sākam metadatu augšupielādi uz īsto Lighthouse mezglu...`);
 
-    // 4. Pārvēršam JSON tekstu par Blob failu ar nosaukumu metadata.json
     const jsonString = JSON.stringify(metadata);
     const metadataBlob = new Blob([jsonString], { type: 'application/json' });
     
     const customFormData = new FormData();
     customFormData.append('file', metadataBlob, 'metadata.json');
 
-    // 5. Sūtām uz to pašu dzelžaino galapunktu
-    const response = await fetch('https://api.lighthouse.storage/api/v0/upload', {
+    // 4. Sūtām uz stabilo add galapunktu
+    const response = await fetch('https://node.lighthouse.storage/api/v0/add', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${env.LIGHTHOUSE_API_KEY}`
