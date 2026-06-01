@@ -1,9 +1,9 @@
 // ============================================ //
-// IPFS FUNCTIONS (server-side upload, nonce-safe)
+// IPFS FUNCTIONS (server-side upload via Lighthouse)
 // ============================================ //
 
 import { showToast, showProgress, setProgress, hideProgress } from './ui.js';
-import { PINATA_GATEWAY } from './config.js';
+import { LIGHTHOUSE_GATEWAY } from './config.js';
 import { UI } from './state.js';
 
 export function showIPFSPreview(imageURL, videoURL, metadataURL) {
@@ -11,9 +11,9 @@ export function showIPFSPreview(imageURL, videoURL, metadataURL) {
     UI.previewImage.innerHTML = '';
     UI.previewVideo.innerHTML = '';
     UI.previewMetadata.innerHTML = '';
-    if (imageURL) UI.previewImage.innerHTML = `🖼️ Image: <a href="${PINATA_GATEWAY}${imageURL.cid}" target="_blank">${imageURL.cid.substring(0, 20)}...</a>`;
-    if (videoURL) UI.previewVideo.innerHTML = `🎬 Video: <a href="${PINATA_GATEWAY}${videoURL.cid}" target="_blank">${videoURL.cid.substring(0, 20)}...</a>`;
-    if (metadataURL) UI.previewMetadata.innerHTML = `📄 Metadata: <a href="${PINATA_GATEWAY}${metadataURL.cid}" target="_blank">${metadataURL.cid.substring(0, 20)}...</a>`;
+    if (imageURL) UI.previewImage.innerHTML = `🖼️ Image: <a href="${LIGHTHOUSE_GATEWAY}${imageURL.cid}" target="_blank">${imageURL.cid.substring(0, 20)}...</a>`;
+    if (videoURL) UI.previewVideo.innerHTML = `🎬 Video: <a href="${LIGHTHOUSE_GATEWAY}${videoURL.cid}" target="_blank">${videoURL.cid.substring(0, 20)}...</a>`;
+    if (metadataURL) UI.previewMetadata.innerHTML = `📄 Metadata: <a href="${LIGHTHOUSE_GATEWAY}${metadataURL.cid}" target="_blank">${metadataURL.cid.substring(0, 20)}...</a>`;
     if (UI.ipfsPreview) UI.ipfsPreview.style.display = 'block';
     setTimeout(() => { if (UI.ipfsPreview) UI.ipfsPreview.style.display = 'none'; }, 10000);
   }
@@ -21,10 +21,9 @@ export function showIPFSPreview(imageURL, videoURL, metadataURL) {
 
 /**
  * Augšupielādē failu caur mūsu servera aizsargāto gala punktu.
- * Vairs neizmanto getUploadToken un tiešo Pinata izsaukumu.
  */
 export async function uploadFileToIPFS(file) {
-  showToast('Uploading file to IPFS...', 'info');
+  showToast('Uploading file to IPFS via Lighthouse...', 'info');
   
   const formData = new FormData();
   formData.append('file', file);
@@ -49,12 +48,12 @@ export async function uploadFileToIPFS(file) {
   const result = await res.json();
   if (!result.cid) throw new Error("Upload failed - no CID returned");
   
-  console.log("File uploaded:", result.cid);
+  console.log("File uploaded to Lighthouse:", result.cid);
   return result; // { ipfs: "ipfs://...", http: "...", cid: "..." }
 }
 
 export async function uploadMetadataToIPFS(metadata) {
-  showToast('Preparing metadata...', 'info');
+  showToast('Preparing metadata for Lighthouse...', 'info');
   
   // Izmanto apiFetch no api.js, kas automātiski pievieno JWT galveni
   const { apiFetch } = await import('./api.js');
@@ -65,18 +64,18 @@ export async function uploadMetadataToIPFS(metadata) {
   
   if (!response.ok) throw new Error(`Metadata upload failed: ${response.status}`);
   
-  showToast('Metadata uploaded!', 'success');
+  showToast('Metadata uploaded to Lighthouse!', 'success');
   return await response.json();
 }
 
 export async function uploadImageToIPFS(canvas) {
-  showToast('Preparing image...', 'info');
+  showToast('Preparing image for Lighthouse...', 'info');
   return new Promise((resolve, reject) => {
     canvas.toBlob(async (blob) => {
       if (!blob) { reject(new Error('Failed to create image')); return; }
       const file = new File([blob], `snapshot_${Date.now()}.png`, { type: 'image/png' });
       try { 
-        showToast('Uploading image...', 'info'); 
+        showToast('Uploading image to Lighthouse...', 'info'); 
         resolve(await uploadFileToIPFS(file)); 
       } catch (error) { reject(error); }
     }, 'image/png');
@@ -84,7 +83,7 @@ export async function uploadImageToIPFS(canvas) {
 }
 
 export async function uploadVideoToIPFS(stream, duration = 15000) {
-  showToast('Recording video...', 'info');
+  showToast('Recording video for Lighthouse...', 'info');
   let mimeType = 'video/webm';
   if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/mp4';
   const recorder = new MediaRecorder(stream, { mimeType });
@@ -96,7 +95,7 @@ export async function uploadVideoToIPFS(stream, duration = 15000) {
       const blob = new Blob(chunks, { type: mimeType });
       const file = new File([blob], `video_${Date.now()}.${ext}`, { type: mimeType });
       try { 
-        showToast('Uploading video...', 'info'); 
+        showToast('Uploading video to Lighthouse...', 'info'); 
         resolve(await uploadFileToIPFS(file)); 
       } catch (error) { reject(error); }
     };
