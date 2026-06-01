@@ -1,0 +1,19 @@
+{
+  "name": "nft-base-sepolia-testnet",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.13.0",
+    "ethers": "^6.13.0",
+    "express": "^4.19.2",
+    "jose": "^5.9.6",
+    "pinata": "latest"
+  },
+  "overrides": {
+    "ws": "^8.18.0"
+  }
+}
