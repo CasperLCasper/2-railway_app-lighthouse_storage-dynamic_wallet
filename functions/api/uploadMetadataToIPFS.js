@@ -1,10 +1,12 @@
 import { requireAuth } from "../_lib/auth.js";
 import { checkRateLimit } from "../_lib/rateLimit.js";
+import lighthouse from '@lighthouse-web3/sdk';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
 
   try {
+    // 1. Lietotāja autentifikācija
     const user = await requireAuth(request, env);
     if (user instanceof Response) return user;
     if (!user || !user.address) {
@@ -14,6 +16,7 @@ export async function onRequestPost(context) {
       });
     }
 
+    // 2. Ātruma ierobežojums (Rate limiting) metadatiem
     const rateKey = `upload-metadata:${user.address}`;
     if (!(await checkRateLimit({ key: rateKey, limit: 5, windowMs: 60000 }, env))) {
       return new Response(JSON.stringify({ error: 'Too many requests. Try again later.' }), {
@@ -22,6 +25,7 @@ export async function onRequestPost(context) {
       });
     }
 
+    // 3. JSON datu saņemšana no klienta
     let metadata;
     try {
       metadata = await request.json();
@@ -47,36 +51,24 @@ export async function onRequestPost(context) {
       });
     }
 
-    console.log(`🚀 Sākam metadatu augšupielādi uz Lighthouse priekš lietotāja: ${user.address}`);
+    console.log(`🚀 Augšupielādējam NFT JSON metadatus caur Lighthouse SDK...`);
 
-    // LABOTS: Teksta/JSON tiešai sūtīšanai izmantojam text-json galapunktu
-    const response = await fetch('https://api.lighthouse.storage/api/v0/text-json', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${env.LIGHTHOUSE_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(metadata)
-    });
+    const jsonString = JSON.stringify(metadata);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ Lighthouse API noraidīja metadatus: ${response.status} - ${errorText}`);
-      throw new Error(`Lighthouse API error: ${response.status} - ${errorText}`);
-    }
+    // 4. Izmantojam oficiālo SDK funkciju tīra teksta/JSON noglabāšanai
+    // parametri: lighthouse.uploadText(text, apiKey)
+    const result = await lighthouse.uploadText(jsonString, env.LIGHTHOUSE_API_KEY);
 
-    const result = await response.json();
-    
-    // text-json galapunkts atgriež { Name: '...', Hash: 'Qm...', Size: '...' } tiešā veidā
-    if (!result || !result.Hash) {
-      console.error('❌ Lighthouse API neatgrieza korektu Hash metadatiem. Atbilde:', result);
+    // 5. Pārbaudām un atgriežam rezultātu
+    if (!result || !result.data || !result.data.Hash) {
+      console.error('❌ Lighthouse SDK neatgrieza derīgu Hash metadatiem. Atbilde:', result);
       return new Response(JSON.stringify({ error: 'Upload failed - no CID returned for metadata' }), {
         status: 500,
         headers: { "Content-Type": "application/json" }
       });
     }
 
-    const cid = result.Hash;
+    const cid = result.data.Hash;
     console.log(`✅ Metadati veiksmīgi augšupielādēti! CID: ${cid}`);
 
     return new Response(JSON.stringify({
