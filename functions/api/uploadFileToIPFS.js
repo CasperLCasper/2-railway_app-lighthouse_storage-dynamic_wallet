@@ -9,6 +9,7 @@ export async function onRequestPost(context) {
   const { request, env } = context;
 
   try {
+    // 1. Lietotāja autentifikācija
     const user = await requireAuth(request, env);
     if (user instanceof Response) return user;
     if (!user || !user.address) {
@@ -18,7 +19,7 @@ export async function onRequestPost(context) {
       });
     }
 
-    // Rate limiting (ar await)
+    // 2. Ātruma ierobežojums (Rate limiting)
     const rateKey = `upload-file:${user.address}`;
     if (!(await checkRateLimit({ key: rateKey, limit: 5, windowMs: 60000 }, env))) {
       return new Response(JSON.stringify({ error: 'Too many file uploads. Try again later.' }), {
@@ -27,6 +28,7 @@ export async function onRequestPost(context) {
       });
     }
 
+    // 3. Form data ielasīšana un validācija
     let formData;
     try {
       formData = await request.formData();
@@ -47,6 +49,7 @@ export async function onRequestPost(context) {
 
     const contentType = fileEntry.type;
     const fileSize = fileEntry.size;
+    
     if (!ALLOWED_TYPES.includes(contentType)) {
       return new Response(JSON.stringify({ error: `File type not allowed: ${contentType}` }), {
         status: 400,
@@ -60,20 +63,35 @@ export async function onRequestPost(context) {
       });
     }
 
+    // 4. API atslēgas pārbaude drošībai
+    if (!env.LIGHTHOUSE_API_KEY) {
+      console.error("❌ Railway sistēmā nav atrasts LIGHTHOUSE_API_KEY mainīgais!");
+      return new Response(JSON.stringify({ error: 'Server configuration error: Missing API Key' }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // 5. Faila pārvēršana par Buffer Node.js videi
     const arrayBuffer = await fileEntry.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const result = await lighthouse.uploadBuffer(buffer, env.LIGHTHOUSE_API_KEY, fileEntry.name);
+    console.log(`🚀 Sākam augšupielādi uz Lighthouse. Fails: ${fileEntry.name}, Izmērs: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
 
+    // 6. Lighthouse augšupielāde (Tikai ar buffer un apiKey parametriem)
+    const result = await lighthouse.uploadBuffer(buffer, env.LIGHTHOUSE_API_KEY);
+
+    // 7. Atbildes pārbaude
     if (!result || !result.data || !result.data.Hash) {
-      return new Response(JSON.stringify({ error: 'Upload failed - no CID returned' }), {
+      console.error('❌ Lighthouse neatgrieza korektu CID. Saņemtā atbilde:', result);
+      return new Response(JSON.stringify({ error: 'Upload failed - no CID returned from Lighthouse' }), {
         status: 500,
         headers: { "Content-Type": "application/json" }
       });
     }
 
     const cid = result.data.Hash;
-    console.log(`✅ User ${user.address} uploaded file via Lighthouse: ${fileEntry.name}, cid: ${cid}`);
+    console.log(`✅ Lietotājs ${user.address} veiksmīgi augšupielādēja failu caur Lighthouse: ${fileEntry.name}, CID: ${cid}`);
 
     return new Response(JSON.stringify({
       ipfs: `ipfs://${cid}`,
@@ -85,8 +103,14 @@ export async function onRequestPost(context) {
     });
 
   } catch (error) {
-    console.error('Upload error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('💥 Augšupielādes kļūda (catch bloks):', error);
+    
+    // Ja Lighthouse atgriež papildu ziņojumu, izvelkam to, ja nē – parasto error.message
+    const errorMessage = error.response && error.response.data 
+      ? JSON.stringify(error.response.data) 
+      : error.message;
+
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { "Content-Type": "application/json" }
     });
