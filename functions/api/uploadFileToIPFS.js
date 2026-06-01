@@ -1,6 +1,6 @@
-import { PinataSDK } from 'pinata';
 import { requireAuth } from "../_lib/auth.js";
 import { checkRateLimit } from "../_lib/rateLimit.js";
+import lighthouse from '@lighthouse-web3/sdk';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'video/mp4', 'video/webm'];
 const MAX_SIZE = 50 * 1024 * 1024; // 50MB
@@ -60,18 +60,25 @@ export async function onRequestPost(context) {
       });
     }
 
-    const pinata = new PinataSDK({
-      pinataJwt: env.PINATA_JWT,
-      pinataGateway: env.PINATA_GATEWAY,
-    });
+    const arrayBuffer = await fileEntry.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    const result = await pinata.upload.public.file(fileEntry);
-    console.log(`✅ User ${user.address} uploaded file: ${fileEntry.name}, cid: ${result.cid}`);
+    const result = await lighthouse.uploadBuffer(buffer, env.LIGHTHOUSE_API_KEY, fileEntry.name);
+
+    if (!result || !result.data || !result.data.Hash) {
+      return new Response(JSON.stringify({ error: 'Upload failed - no CID returned' }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    const cid = result.data.Hash;
+    console.log(`✅ User ${user.address} uploaded file via Lighthouse: ${fileEntry.name}, cid: ${cid}`);
 
     return new Response(JSON.stringify({
-      ipfs: `ipfs://${result.cid}`,
-      http: `https://gateway.pinata.cloud/ipfs/${result.cid}`,
-      cid: result.cid
+      ipfs: `ipfs://${cid}`,
+      http: `https://gateway.lighthouse.storage/ipfs/${cid}`,
+      cid: cid
     }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
