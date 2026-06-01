@@ -35,7 +35,6 @@ export async function onRequestPost(context) {
       });
     }
 
-    // Pārbaudām, vai metadati nav tukši
     if (!metadata || Object.keys(metadata).length === 0) {
       return new Response(JSON.stringify({ error: "Metadata object cannot be empty" }), {
         status: 400,
@@ -54,11 +53,10 @@ export async function onRequestPost(context) {
 
     console.log(`🚀 Sākam metadatu augšupielādi uz Lighthouse priekš lietotāja: ${user.address}`);
 
-    // Poubējam JSON par teksta stringu
     const jsonString = JSON.stringify(metadata);
 
-    // 5. Veicam pieprasījumu pa taisno uz Lighthouse API (izmantojot viņu teksta augšupielādes galapunktu)
-    const response = await fetch('https://node.lighthouse.storage/api/v0/add', {
+    // 5. Veicam pieprasījumu uz stabilo Lighthouse API galapunktu
+    const response = await fetch('https://api.lighthouse.storage/api/v0/add', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${env.LIGHTHOUSE_API_KEY}`,
