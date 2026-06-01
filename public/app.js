@@ -4,7 +4,7 @@
 
 import { AppState, initUI, UI } from './modules/state.js';
 import { VIZ_CHAINS, MINT_CHAIN } from './modules/chains.js';
-import { PINATA_GATEWAY, CONTRACT_ABI, LOW_POWER_MODE } from './modules/config.js';
+import { LIGHTHOUSE_GATEWAY, CONTRACT_ABI, LOW_POWER_MODE } from './modules/config.js';
 import { showToast, setButtonLoading, updateTokenListUI, hideProgress, showProgress } from './modules/ui.js';
 import { login, getNFTPrice, getContractAddress } from './modules/api.js';
 import { connectWallet, updateChainStatus, switchToMintChain, switchToVizChain } from './modules/web3.js';
@@ -145,7 +145,7 @@ const App = Object.assign({}, AppState, {
     }
     
     setButtonLoading(UI.generateNFTBtn, true);
-    showToast('📸 Preparing image...', 'info');
+    showToast('📸 Preparing image for Lighthouse...', 'info');
     
     try {
       const imageResult = await uploadImageToIPFS(UI.canvas);
@@ -157,7 +157,7 @@ const App = Object.assign({}, AppState, {
         videoResult = await uploadVideoToIPFS(stream, 15000); 
         this.lastVideoURL = videoResult; 
       } catch (error) { 
-        console.warn('Video upload failed:', error); 
+        console.warn('Video upload to Lighthouse failed:', error); 
         showToast('🎬 Video upload failed, continuing without video', 'warning');
       }
       
@@ -177,7 +177,7 @@ const App = Object.assign({}, AppState, {
       const metadata = {
         name: "Wallet Visualization NFT",
         description: `Generated from wallet ${this.account} on ${new Date().toISOString()}`,
-        image: `${PINATA_GATEWAY}${cleanImageCID}`,
+        image: `${LIGHTHOUSE_GATEWAY}${cleanImageCID}`,
         attributes: [
           { trait_type: "ETH Balance", value: this.ethBalance.toString() },
           { trait_type: "Token Count", value: this.tokens.length.toString() },
@@ -189,7 +189,7 @@ const App = Object.assign({}, AppState, {
       };
       
       if (videoResult && cleanVideoCID) {
-        metadata.animation_url = `${PINATA_GATEWAY}${cleanVideoCID}`;
+        metadata.animation_url = `${LIGHTHOUSE_GATEWAY}${cleanVideoCID}`;
       }
       
       const metadataResult = await uploadMetadataToIPFS(metadata);
@@ -234,9 +234,9 @@ const App = Object.assign({}, AppState, {
       showToast('⏳ Transaction submitted, waiting for confirmation...', 'info');
       
       await signedTx.wait();
-      showToast('✅ NFT minted successfully!', 'success');
+      showToast('✅ NFT minted successfully via Lighthouse!', 'success');
       
-      alert(`✅ NFT minted successfully!\n\nTransaction hash: ${signedTx.hash}\nMint price: ${ethers.formatEther(mintData.transaction.value)} ETH\nCID: ${metadataResult.cid}\nSource chain: ${this.currentVizChain}`);
+      alert(`✅ NFT minted successfully!\n\nTransaction hash: ${signedTx.hash}\nMint price: ${ethers.formatEther(mintData.transaction.value)} ETH\nCID: ${metadataResult.cid}\nSource chain: ${this.currentVizChain}\nView on Lighthouse: ${LIGHTHOUSE_GATEWAY}${metadataResult.cid}`);
       
     } catch (error) {
       console.error(error);
@@ -288,7 +288,7 @@ const App = Object.assign({}, AppState, {
   },
 
   init() {
-    console.log("🚀 Starting Wallet Visualizer...");
+    console.log("🚀 Starting Wallet Visualizer with Lighthouse Storage...");
     initUI();
     resizeCanvas(this);
     
@@ -339,7 +339,7 @@ const App = Object.assign({}, AppState, {
     window.LOW_POWER_MODE = LOW_POWER_MODE;
     
     showToast('✨ Welcome! Connect your wallet to begin.', 'info');
-    console.log('✅ Wallet Visualizer Ready!');
+    console.log('✅ Wallet Visualizer Ready with Lighthouse Storage!');
   }
 });
 
