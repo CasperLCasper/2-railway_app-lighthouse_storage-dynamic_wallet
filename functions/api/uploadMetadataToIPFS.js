@@ -1,7 +1,7 @@
-import { PinataSDK } from "pinata";
 import { requireAuth } from "../_lib/auth.js";
 import { checkRateLimit } from "../_lib/rateLimit.js";
 import { setCache } from "../_lib/cache.js";
+import lighthouse from '@lighthouse-web3/sdk';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -73,21 +73,28 @@ export async function onRequestPost(context) {
       }
     }
 
-    const pinata = new PinataSDK({
-      pinataJwt: env.PINATA_JWT,
-      pinataGateway: env.PINATA_GATEWAY,
-    });
+    const jsonString = JSON.stringify(metadata);
+    const buffer = Buffer.from(jsonString);
 
-    const result = await pinata.upload.public.json(metadata);
-    console.log(`✅ User ${user.address} uploaded metadata: ${metadata.name}, cid: ${result.cid}`);
+    const result = await lighthouse.uploadBuffer(buffer, env.LIGHTHOUSE_API_KEY, 'metadata.json');
+
+    if (!result || !result.data || !result.data.Hash) {
+      return new Response(JSON.stringify({ error: 'Upload failed - no CID returned' }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    const cid = result.data.Hash;
+    console.log(`✅ User ${user.address} uploaded metadata via Lighthouse: ${metadata.name}, cid: ${cid}`);
 
     // 🔒 Saglabājam CID ar mazajiem burtiem, lai atslēga būtu vienāda ar mint pusi
-    await setCache(`lastUploadCID:${user.address.toLowerCase()}`, result.cid, env, 5 * 60 * 1000);
+    await setCache(`lastUploadCID:${user.address.toLowerCase()}`, cid, env, 5 * 60 * 1000);
 
     return new Response(JSON.stringify({
-      ipfs: `ipfs://${result.cid}`,
-      http: `https://gateway.pinata.cloud/ipfs/${result.cid}`,
-      cid: result.cid
+      ipfs: `ipfs://${cid}`,
+      http: `https://gateway.lighthouse.storage/ipfs/${cid}`,
+      cid: cid
     }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
