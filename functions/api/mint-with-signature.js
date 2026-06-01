@@ -100,8 +100,8 @@ export async function onRequestPost(context) {
       });
     }
 
-    // 🌟 Šeit mēs izveidojam tiešo HTTPS saiti, ko saglabāt līgumā!
-    const fullIpfsUri = `https://gateway.pinata.cloud/ipfs/${cleanMetadataCID}`;
+    // 🌟 Izveidojam tiešo HTTPS saiti caur Lighthouse gateway
+    const fullIpfsUri = `https://gateway.lighthouse.storage/ipfs/${cleanMetadataCID}`;
     const serverWallet = new ethers.Wallet(SERVER_PRIVATE_KEY);
 
     const domain = {
