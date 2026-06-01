@@ -7,11 +7,11 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@lighthouse-web3/sdk": "^0.3.0",
     "@upstash/redis": "^1.13.0",
     "ethers": "^6.13.0",
     "express": "^4.19.2",
-    "jose": "^5.9.6",
-    "pinata": "latest"
+    "jose": "^5.9.6"
   },
   "overrides": {
     "ws": "^8.18.0"
