@@ -1,6 +1,5 @@
 import { requireAuth } from "../_lib/auth.js";
 import { checkRateLimit } from "../_lib/rateLimit.js";
-import lighthouse from '@lighthouse-web3/sdk';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'video/mp4', 'video/webm'];
 const MAX_SIZE = 50 * 1024 * 1024; // 50MB
@@ -72,26 +71,45 @@ export async function onRequestPost(context) {
       });
     }
 
-    // 5. Faila pārvēršana par Buffer Node.js videi
+    // 5. Sagatavojam FormData tīram API pieprasījumam
     const arrayBuffer = await fileEntry.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const blob = new Blob([arrayBuffer], { type: contentType });
+    
+    const lighthouseFormData = new FormData();
+    // Lighthouse API sagaida failu zem atslēgas "file"
+    lighthouseFormData.append('file', blob, fileEntry.name);
 
-    console.log(`🚀 Sākam augšupielādi uz Lighthouse. Fails: ${fileEntry.name}, Izmērs: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
+    console.log(`🚀 Sākam tīru fetch augšupielādi uz Lighthouse. Fails: ${fileEntry.name}, Izmērs: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
 
-    // 6. Lighthouse augšupielāde (Tikai ar buffer un apiKey parametriem)
-    const result = await lighthouse.uploadBuffer(buffer, env.LIGHTHOUSE_API_KEY);
+    // 6. Veicam pieprasījumu pa taisno uz Lighthouse API galapunktu
+    const response = await fetch('https://node.lighthouse.storage/api/v0/add', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.LIGHTHOUSE_API_KEY}`
+      },
+      body: lighthouseFormData
+    });
 
-    // 7. Atbildes pārbaude
-    if (!result || !result.data || !result.data.Hash) {
-      console.error('❌ Lighthouse neatgrieza korektu CID. Saņemtā atbilde:', result);
-      return new Response(JSON.stringify({ error: 'Upload failed - no CID returned from Lighthouse' }), {
+    // 7. Pārbaudām tīkla atbildi
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Lighthouse API noraidīja pieprasījumu: ${response.status} - ${errorText}`);
+      throw new Error(`Lighthouse API error: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    
+    // Tīrais API atgriež objektu, kurā CID atrodas tieši zem "Hash" (piem. { Name: "...", Hash: "Qm...", Size: "..." })
+    if (!result || !result.Hash) {
+      console.error('❌ Lighthouse API neatgrieza korektu Hash. Saņemtā atbilde:', result);
+      return new Response(JSON.stringify({ error: 'Upload failed - no CID returned from Lighthouse API' }), {
         status: 500,
         headers: { "Content-Type": "application/json" }
       });
     }
 
-    const cid = result.data.Hash;
-    console.log(`✅ Lietotājs ${user.address} veiksmīgi augšupielādēja failu caur Lighthouse: ${fileEntry.name}, CID: ${cid}`);
+    const cid = result.Hash;
+    console.log(`✅ Lietotājs ${user.address} veiksmīgi augšupielādēja failu: ${fileEntry.name}, CID: ${cid}`);
 
     return new Response(JSON.stringify({
       ipfs: `ipfs://${cid}`,
@@ -104,13 +122,7 @@ export async function onRequestPost(context) {
 
   } catch (error) {
     console.error('💥 Augšupielādes kļūda (catch bloks):', error);
-    
-    // Ja Lighthouse atgriež papildu ziņojumu, izvelkam to, ja nē – parasto error.message
-    const errorMessage = error.response && error.response.data 
-      ? JSON.stringify(error.response.data) 
-      : error.message;
-
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { "Content-Type": "application/json" }
     });
