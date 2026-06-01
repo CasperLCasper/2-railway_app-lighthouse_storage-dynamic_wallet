@@ -4,7 +4,7 @@
 
 import { getRpcUrl } from './chains.js';
 
-export const PINATA_GATEWAY = "https://gateway.pinata.cloud/ipfs/";
+export const LIGHTHOUSE_GATEWAY = "https://gateway.lighthouse.storage/ipfs/";
 
 export const CONTRACT_ABI = [
   "function mintPrice() view returns (uint256)"
