@@ -76,13 +76,12 @@ export async function onRequestPost(context) {
     const blob = new Blob([arrayBuffer], { type: contentType });
     
     const lighthouseFormData = new FormData();
-    // Lighthouse API sagaida failu zem atslēgas "file"
     lighthouseFormData.append('file', blob, fileEntry.name);
 
-    console.log(`🚀 Sākam tīru fetch augšupielādi uz Lighthouse. Fails: ${fileEntry.name}, Izmērs: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
+    console.log(`🚀 Sākam tīru fetch augšupielādi uz Lighthouse API. Fails: ${fileEntry.name}, Izmērs: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
 
-    // 6. Veicam pieprasījumu pa taisno uz Lighthouse API galapunktu
-    const response = await fetch('https://node.lighthouse.storage/api/v0/add', {
+    // 6. Veicam pieprasījumu uz aktīvo un stabilo Lighthouse API galapunktu
+    const response = await fetch('https://api.lighthouse.storage/api/v0/add', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${env.LIGHTHOUSE_API_KEY}`
@@ -99,7 +98,6 @@ export async function onRequestPost(context) {
 
     const result = await response.json();
     
-    // Tīrais API atgriež objektu, kurā CID atrodas tieši zem "Hash" (piem. { Name: "...", Hash: "Qm...", Size: "..." })
     if (!result || !result.Hash) {
       console.error('❌ Lighthouse API neatgrieza korektu Hash. Saņemtā atbilde:', result);
       return new Response(JSON.stringify({ error: 'Upload failed - no CID returned from Lighthouse API' }), {
