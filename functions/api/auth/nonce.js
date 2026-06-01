@@ -1,4 +1,5 @@
 import { SignJWT } from "jose";
+import crypto from "crypto"; // <-- LABOTS: Importējam Node.js crypto moduli
 
 const NONCE_TTL = "5m"; // 5 minūtes
 
