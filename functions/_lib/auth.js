@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { ethers } from "ethers";
+import crypto from "crypto"; // <-- LABOTS: Importējam Node.js crypto moduli priekš randomUUID()
 
 // Verify wallet signature (without nonce – nonce verification is done in login)
 export function verifySignature(address, message, signature) {
@@ -17,7 +18,7 @@ export async function createToken(address, env) {
     throw new Error("JWT_SECRET environment variable is required");
   }
   const secret = new TextEncoder().encode(env.JWT_SECRET);
-  const jti = crypto.randomUUID();
+  const jti = crypto.randomUUID(); // <-- Tagad crypto būs definēts un strādās!
   return await new SignJWT({ address, jti })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
