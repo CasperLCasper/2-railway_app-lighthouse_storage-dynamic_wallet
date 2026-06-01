@@ -70,21 +70,20 @@ export async function onRequestPost(context) {
       });
     }
 
-    // 4. Manuāli uzbūvējam FormData priekš Lighthouse API
+    // 4. Uzbūvējam FormData priekš Lighthouse mezgla
     const arrayBuffer = await fileEntry.arrayBuffer();
     const fileBlob = new Blob([arrayBuffer], { type: contentType });
     
     const customFormData = new FormData();
     customFormData.append('file', fileBlob, fileEntry.name);
 
-    console.log(`🚀 Sūtām tīru HTTP POST uz Lighthouse ražošanas serveri. Fails: ${fileEntry.name}`);
+    console.log(`🚀 Sūtām tīru HTTP POST uz īsto Lighthouse mezglu punktu. Fails: ${fileEntry.name}`);
 
-    // 5. Izpildām tiešu pieprasījumu uz īsto Lighthouse API augšupielādes galapunktu
-    const response = await fetch('https://api.lighthouse.storage/api/v0/upload', {
+    // 5. Izpildām pieprasījumu uz strādājošo IPFS pievienošanas galapunktu
+    const response = await fetch('https://node.lighthouse.storage/api/v0/add', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${env.LIGHTHOUSE_API_KEY}`
-        // Svarīgi: Šeit Content-Type galveni NESTĀDA MANUĀLI, pārlūks/Node to izdarīs pats ar pareizo boundary!
       },
       body: customFormData
     });
@@ -97,7 +96,7 @@ export async function onRequestPost(context) {
 
     const result = await response.json();
     
-    // Ja Lighthouse atgriež masīvu, paņemam pirmo objektu
+    // Lighthouse šajā maršrutā atgriež datus tiešā objektā vai kā masīvu
     const dataObj = Array.isArray(result) ? result[0] : result;
 
     if (!dataObj || !dataObj.Hash) {
