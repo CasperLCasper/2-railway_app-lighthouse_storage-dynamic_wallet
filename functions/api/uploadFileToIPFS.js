@@ -63,26 +63,24 @@ export async function onRequestPost(context) {
     }
 
     if (!env.LIGHTHOUSE_API_KEY) {
-      console.error("❌ Railway sistēmā nav atrasts LIGHTHOUSE_API_KEY!");
       return new Response(JSON.stringify({ error: 'Server configuration error: Missing API Key' }), {
         status: 500,
         headers: { "Content-Type": "application/json" }
       });
     }
 
-    // 4. Konvertējam uz tradicionālu Buffer (Railway tas strādā bez timeout gļukiem)
+    // 4. Droša faila konvertēšana (Novērš ExperimentalWarning un saderības gļukus)
     const arrayBuffer = await fileEntry.arrayBuffer();
-    const nodeBuffer = Buffer.from(arrayBuffer);
+    const buffer = Buffer.from(arrayBuffer);
+    const fileBlob = new Blob([buffer], { type: contentType });
     
     const customFormData = new FormData();
-    // Izmantojam vienkāršu faila pārsūtīšanu bez eksperimentālajiem Node Blob ietvariem
-    const fileBlob = new Response(nodeBuffer).blob();
-    customFormData.append('file', await fileBlob, fileEntry.name);
+    customFormData.append('file', fileBlob, fileEntry.name);
 
-    console.log(`🚀 Mēģinām sūtīt failu uz Lighthouse Gateway API: ${fileEntry.name}`);
+    console.log(`🚀 Sūtām uz Lighthouse API ražošanas vārteju (/api/v0/upload): ${fileEntry.name}`);
 
-    // 5. Izmantojam rezerves augšupielādes vārteju ar pagarinātu savienojuma gaidīšanu
-    const response = await fetch('https://api.lighthouse.storage/api/v0/add', {
+    // 5. Izpildām pieprasījumu uz pareizo un strādājošo upload galapunktu
+    const response = await fetch('https://api.lighthouse.storage/api/v0/upload', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${env.LIGHTHOUSE_API_KEY}`
@@ -92,12 +90,14 @@ export async function onRequestPost(context) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`❌ Lighthouse API atgrieza kļūdu: ${response.status} - ${errorText}`);
-      throw new Error(`Lighthouse HTTP Error: ${response.status} - ${errorText}`);
+      console.error(`❌ Lighthouse API kļūda: ${response.status} - ${errorText}`);
+      throw new Error(`Lighthouse HTTP Error: ${response.status}`);
     }
 
     const result = await response.json();
-    const dataObj = Array.isArray(result) ? result[0] : result;
+    
+    // api.lighthouse.storage atgriež objektu ar "Hash" vai "data.Hash"
+    const dataObj = result.data ? result.data : result;
 
     if (!dataObj || !dataObj.Hash) {
       console.error('❌ Lighthouse neatgrieza Hash. Atbilde:', result);
@@ -105,7 +105,7 @@ export async function onRequestPost(context) {
     }
 
     const cid = dataObj.Hash;
-    console.log(`✅ Veiksmīga augšupielāde! CID: ${cid}`);
+    console.log(`✅ Veiksmīga faila augšupielāde! CID: ${cid}`);
 
     return new Response(JSON.stringify({
       ipfs: `ipfs://${cid}`,
@@ -117,7 +117,7 @@ export async function onRequestPost(context) {
     });
 
   } catch (error) {
-    console.error('💥 Augšupielādes kļūda manuālajā fetch:', error);
+    console.error('💥 Augšupielādes kļūda:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { "Content-Type": "application/json" }
