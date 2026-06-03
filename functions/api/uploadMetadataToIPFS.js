@@ -7,7 +7,6 @@ export async function onRequestPost(context) {
   const { request, env } = context;
 
   try {
-    // 1. Autentifikācija
     const user = await requireAuth(request, env);
     if (user instanceof Response) return user;
     if (!user || !user.address) {
@@ -17,7 +16,6 @@ export async function onRequestPost(context) {
       });
     }
 
-    // 2. Rate limits
     const rateKey = `upload-metadata:${user.address}`;
     if (!(await checkRateLimit({ key: rateKey, limit: 5, windowMs: 60000 }, env))) {
       return new Response(JSON.stringify({ error: 'Too many requests. Try again later.' }), {
@@ -26,7 +24,6 @@ export async function onRequestPost(context) {
       });
     }
 
-    // 3. JSON nolasīšana
     let metadata;
     try {
       metadata = await request.json();
@@ -51,22 +48,20 @@ export async function onRequestPost(context) {
       });
     }
 
-    console.log(`🚀 Augšupielādējam metadatus caur Lighthouse SDK (storageType: lifetime)...`);
+    console.log(`🚀 Augšupielādējam metadatus caur Lighthouse SDK (storageType: LIFETIME)...`);
 
-    // 4. Pārveidojam metadatus par Buffer
     const jsonString = JSON.stringify(metadata);
     const buffer = Buffer.from(jsonString, 'utf-8');
 
-    // 5. Izmantojam Lighthouse SDK uploadBuffer ar storageType: "lifetime"
+    // ✅ SVARĪGI: storageType kā 5. arguments (pēc encrypt=false, encryptionParams=null)
     const uploadResponse = await lighthouse.uploadBuffer(
       buffer,
       env.LIGHTHOUSE_API_KEY,
-      {
-        storageType: "lifetime"
-      }
+      false,  // encrypt
+      null,   // encryptionParams
+      { storageType: "lifetime" }  // <-- OPTIONS OBJEKTS AR storageType
     );
 
-    // Lighthouse SDK atgriež { data: { Hash: "...", Name: "...", Size: "..." } }
     const cid = uploadResponse?.data?.Hash || uploadResponse?.Hash;
 
     if (!cid) {
@@ -74,9 +69,8 @@ export async function onRequestPost(context) {
       throw new Error('No CID returned for metadata from Lighthouse SDK');
     }
 
-    console.log(`✅ Metadati veiksmīgi augšupielādēti! CID: ${cid}`);
+    console.log(`✅ Metadati veiksmīgi augšupielādēti ar LIFETIME plānu! CID: ${cid}`);
 
-    // 6. Saglabājam CID kešā priekš mint verifikācijas (5 minūtes TTL)
     const lastUploadKey = `lastUploadCID:${user.address.toLowerCase()}`;
     await setCache(lastUploadKey, cid, env, 5 * 60 * 1000);
 
