@@ -4,7 +4,7 @@
 
 import { getRpcUrl } from './chains.js';
 
-export const LIGHTHOUSE_GATEWAY = "https://gateway.lighthouse.storage/ipfs/";
+export const LIGHTHOUSE_GATEWAY = "https://meaningful-macaw-y3g2r.lighthouseweb3.xyz/ipfs/";
 
 export const CONTRACT_ABI = [
   "function mintPrice() view returns (uint256)"
