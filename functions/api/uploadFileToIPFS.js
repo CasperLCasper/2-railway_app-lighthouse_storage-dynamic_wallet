@@ -19,22 +19,20 @@ export async function onRequestPost(context) {
       });
     }
 
-    console.log(`🚀 Augšupielādējam failu caur Lighthouse SDK (storageType: lifetime)...`);
+    console.log(`🚀 Augšupielādējam failu caur Lighthouse SDK (storageType: LIFETIME)...`);
 
-    // Pārveidojam par Buffer (saderīgs ar Cloudflare Workers)
     const arrayBuffer = await fileEntry.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Izmantojam Lighthouse SDK uploadBuffer ar storageType: "lifetime"
+    // ✅ SVARĪGI: storageType kā 5. arguments (pēc encrypt=false, encryptionParams=null)
     const uploadResponse = await lighthouse.uploadBuffer(
       buffer,
       env.LIGHTHOUSE_API_KEY,
-      {
-        storageType: "lifetime"
-      }
+      false,  // encrypt
+      null,   // encryptionParams
+      { storageType: "lifetime" }  // <-- OPTIONS OBJEKTS AR storageType
     );
 
-    // Lighthouse SDK atgriež { data: { Hash: "...", Name: "...", Size: "..." } }
     const cid = uploadResponse?.data?.Hash || uploadResponse?.Hash;
 
     if (!cid) {
@@ -42,7 +40,7 @@ export async function onRequestPost(context) {
       throw new Error("Neizdevās iegūt CID no Lighthouse SDK");
     }
 
-    console.log(`✅ Fails veiksmīgi augšupielādēts! CID: ${cid}`);
+    console.log(`✅ Fails veiksmīgi augšupielādēts ar LIFETIME plānu! CID: ${cid}`);
 
     return new Response(JSON.stringify({
       ipfs: `ipfs://${cid}`,
