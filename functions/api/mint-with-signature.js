@@ -100,8 +100,8 @@ export async function onRequestPost(context) {
       });
     }
 
-    // 🌟 Izveidojam tiešo HTTPS saiti caur Lighthouse gateway
-    const fullIpfsUri = `https://gateway.lighthouse.storage/ipfs/${cleanMetadataCID}`;
+    // 🌟 Izveidojam tiešo HTTPS saiti caur mūsu dedikēto Lighthouse gateway
+    const fullIpfsUri = `https://meaningful-macaw-y3g2r.lighthouseweb3.xyz/ipfs/${cleanMetadataCID}`;
     const serverWallet = new ethers.Wallet(SERVER_PRIVATE_KEY);
 
     const domain = {
