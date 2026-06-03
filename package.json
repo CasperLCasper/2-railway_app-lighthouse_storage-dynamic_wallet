@@ -9,7 +9,7 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
-    "@lighthouse-web3/sdk": "^latest",
+    "@lighthouse-web3/sdk": "^0.4.5",
     "@upstash/redis": "^1.28.4",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
