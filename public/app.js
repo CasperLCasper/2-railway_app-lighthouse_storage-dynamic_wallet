@@ -145,7 +145,7 @@ const App = Object.assign({}, AppState, {
     }
     
     setButtonLoading(UI.generateNFTBtn, true);
-    showToast('📸 Preparing image for Lighthouse...', 'info');
+    showToast('📸 Preparing image for Lighthouse SDK...', 'info');
     
     try {
       const imageResult = await uploadImageToIPFS(UI.canvas);
@@ -157,7 +157,7 @@ const App = Object.assign({}, AppState, {
         videoResult = await uploadVideoToIPFS(stream, 15000); 
         this.lastVideoURL = videoResult; 
       } catch (error) { 
-        console.warn('Video upload to Lighthouse failed:', error); 
+        console.warn('Video upload to Lighthouse SDK failed:', error); 
         showToast('🎬 Video upload failed, continuing without video', 'warning');
       }
       
@@ -234,7 +234,7 @@ const App = Object.assign({}, AppState, {
       showToast('⏳ Transaction submitted, waiting for confirmation...', 'info');
       
       await signedTx.wait();
-      showToast('✅ NFT minted successfully via Lighthouse!', 'success');
+      showToast('✅ NFT minted successfully via Lighthouse SDK!', 'success');
       
       alert(`✅ NFT minted successfully!\n\nTransaction hash: ${signedTx.hash}\nMint price: ${ethers.formatEther(mintData.transaction.value)} ETH\nCID: ${metadataResult.cid}\nSource chain: ${this.currentVizChain}\nView on Lighthouse: ${LIGHTHOUSE_GATEWAY}${metadataResult.cid}`);
       
@@ -288,7 +288,7 @@ const App = Object.assign({}, AppState, {
   },
 
   init() {
-    console.log("🚀 Starting Wallet Visualizer with Lighthouse Storage...");
+    console.log("🚀 Starting Wallet Visualizer with Lighthouse SDK Storage...");
     initUI();
     resizeCanvas(this);
     
@@ -339,7 +339,7 @@ const App = Object.assign({}, AppState, {
     window.LOW_POWER_MODE = LOW_POWER_MODE;
     
     showToast('✨ Welcome! Connect your wallet to begin.', 'info');
-    console.log('✅ Wallet Visualizer Ready with Lighthouse Storage!');
+    console.log('✅ Wallet Visualizer Ready with Lighthouse SDK Storage!');
   }
 });
 
