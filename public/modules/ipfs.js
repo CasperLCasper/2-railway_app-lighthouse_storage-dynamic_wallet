@@ -1,5 +1,5 @@
 // ============================================ //
-// IPFS FUNCTIONS (server-side upload via Lighthouse)
+// IPFS FUNCTIONS (server-side upload via Lighthouse SDK)
 // ============================================ //
 
 import { showToast, showProgress, setProgress, hideProgress } from './ui.js';
@@ -20,10 +20,10 @@ export function showIPFSPreview(imageURL, videoURL, metadataURL) {
 }
 
 /**
- * Augšupielādē failu caur mūsu servera aizsargāto gala punktu.
+ * Augšupielādē failu caur mūsu servera aizsargāto gala punktu (tagad izmanto Lighthouse SDK).
  */
 export async function uploadFileToIPFS(file) {
-  showToast('Uploading file to IPFS via Lighthouse...', 'info');
+  showToast('Uploading file to IPFS via Lighthouse SDK...', 'info');
   
   const formData = new FormData();
   formData.append('file', file);
@@ -48,12 +48,12 @@ export async function uploadFileToIPFS(file) {
   const result = await res.json();
   if (!result.cid) throw new Error("Upload failed - no CID returned");
   
-  console.log("File uploaded to Lighthouse:", result.cid);
+  console.log("File uploaded to Lighthouse via SDK:", result.cid);
   return result; // { ipfs: "ipfs://...", http: "...", cid: "..." }
 }
 
 export async function uploadMetadataToIPFS(metadata) {
-  showToast('Preparing metadata for Lighthouse...', 'info');
+  showToast('Preparing metadata for Lighthouse SDK...', 'info');
   
   // Izmanto apiFetch no api.js, kas automātiski pievieno JWT galveni
   const { apiFetch } = await import('./api.js');
@@ -64,18 +64,18 @@ export async function uploadMetadataToIPFS(metadata) {
   
   if (!response.ok) throw new Error(`Metadata upload failed: ${response.status}`);
   
-  showToast('Metadata uploaded to Lighthouse!', 'success');
+  showToast('Metadata uploaded to Lighthouse via SDK!', 'success');
   return await response.json();
 }
 
 export async function uploadImageToIPFS(canvas) {
-  showToast('Preparing image for Lighthouse...', 'info');
+  showToast('Preparing image for Lighthouse SDK...', 'info');
   return new Promise((resolve, reject) => {
     canvas.toBlob(async (blob) => {
       if (!blob) { reject(new Error('Failed to create image')); return; }
       const file = new File([blob], `snapshot_${Date.now()}.png`, { type: 'image/png' });
       try { 
-        showToast('Uploading image to Lighthouse...', 'info'); 
+        showToast('Uploading image to Lighthouse via SDK...', 'info'); 
         resolve(await uploadFileToIPFS(file)); 
       } catch (error) { reject(error); }
     }, 'image/png');
@@ -83,7 +83,7 @@ export async function uploadImageToIPFS(canvas) {
 }
 
 export async function uploadVideoToIPFS(stream, duration = 15000) {
-  showToast('Recording video for Lighthouse...', 'info');
+  showToast('Recording video for Lighthouse SDK...', 'info');
   let mimeType = 'video/webm';
   if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/mp4';
   const recorder = new MediaRecorder(stream, { mimeType });
@@ -95,7 +95,7 @@ export async function uploadVideoToIPFS(stream, duration = 15000) {
       const blob = new Blob(chunks, { type: mimeType });
       const file = new File([blob], `video_${Date.now()}.${ext}`, { type: mimeType });
       try { 
-        showToast('Uploading video to Lighthouse...', 'info'); 
+        showToast('Uploading video to Lighthouse via SDK...', 'info'); 
         resolve(await uploadFileToIPFS(file)); 
       } catch (error) { reject(error); }
     };
